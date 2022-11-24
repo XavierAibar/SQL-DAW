@@ -1,2 +1,2 @@
 # 1daw_bbdd
-Database practices
+This is a database practice
