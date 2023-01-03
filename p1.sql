@@ -1,1 +1,0 @@
---Xavier Aibar Martínez
