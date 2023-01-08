@@ -5,6 +5,7 @@ id BIGINT,
   year INT,
   color INT,
   CONSTRAINT pk_cars PRIMARY KEY(id)
+  CONSTRAINT unique_plate UNIQUE(plate)
 );
 INSERT INTO cars(id, plate, year, color) VALUES(1, 'AA', 1990, 9001);
 INSERT INTO cars(id, plate, color) VALUES(3, 'CC', 9001);
