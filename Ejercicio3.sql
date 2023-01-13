@@ -62,7 +62,8 @@ SELECT c.plate, c.color
 FROM cars AS c INNER JOIN model as m ON model = m.id
 WHERE m.name LIKE '%Citröen%';
 /*Ejercicio 7*/
-
+SELECT plate, m.year - c.year
+FROM cars AS c INNER JOIN model as m ON model = m.id;
 /*Ejercicio 8*/
 SELECT MAX(c.year)
 FROM cars AS c INNER JOIN model as m ON model = m.id
