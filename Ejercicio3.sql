@@ -83,6 +83,6 @@ SELECT m.id
 FROM cars AS c INNER JOIN model as m ON model = m.id
 WHERE c.color LIKE 'red';
 /*Ejercicio 13*/
-SELECT m.name
-FROM cars AS c INNER JOIN model as m ON model = m.id
-WHERE m.id NOT IN (cars);
+SELECT name
+FROM model
+WHERE id NOT IN (SELECT model FROM cars);
