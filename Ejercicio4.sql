@@ -90,27 +90,48 @@ VALUES (4, 12);
 INSERT INTO offers (hotel_id, service_id)
 VALUES (4, 13);
 /*Ejercicio 1*/
-SELECT services.name, description
-FROM services;
+SELECT s.name, s.description
+FROM services as s;
 /*Ejercicio 2*/
-SELECT hotels.name, foundation_date
-FROM hotels;
+SELECT h.name, foundation_date
+FROM hotels AS h;
 /*Ejercicio 3*/
-SELECT hotels.name
-FROM services INNER JOIN offers ON services.id = service_id INNER JOIN hotels ON hotel_id = hotels.id
+SELECT h.name
+FROM services AS s INNER JOIN offers ON s.id = service_id INNER JOIN hotels AS h ON hotel_id = h.id
 WHERE foundation_date > '2003';
 /*Ejercicio 4*/
-SELECT hotels.name, services.name, description
-FROM services INNER JOIN offers ON services.id = service_id INNER JOIN hotels ON hotel_id = hotels.id;
+SELECT h.name, s.name, s.description
+FROM services as s INNER JOIN offers as o ON s.id = service_id INNER JOIN hotels as h ON hotel_id = h.id;
 /*Ejercicio 5*/
-SELECT services.name
-FROM services INNER JOIN offers ON services.id = service_id INNER JOIN hotels ON hotel_id = hotels.id
+SELECT s.name
+FROM services as s INNER JOIN offers as o ON s.id = service_id INNER JOIN hotels as h ON hotel_id = h.id
 WHERE foundation_date > '2003-08-2';
 /*Ejercicio 6*/
-SELECT hotels.name, services.name
-FROM services INNER JOIN offers ON services.id = service_id INNER JOIN hotels ON hotel_id = hotels.id
-WHERE hotels.name LIKE '%A%' AND LEN(services.name) > 8;
+SELECT h.name, s.name
+FROM services as s INNER JOIN offers as o ON s.id = service_id INNER JOIN hotels as h ON hotel_id = h.id
+WHERE h.name LIKE '%A%' AND LEN(s.name) > 8;
 /*Ejercicio 7*/
-SELECT hotels.name
-FROM hotels
-WHERE hotels.id NOT IN (SELECT hotels FROM offers);
+SELECT h.name
+FROM hotels as h
+WHERE h.id NOT IN 
+(
+SELECT o.hotel_id 
+FROM offers as o
+);
+/*Ejercicio 8*/
+SELECT s.name
+FROM services as s
+WHERE s.id NOT IN
+(
+SELECT o.service_id
+FROM offers as o
+);
+/*Ejercicio 9*/
+SELECT h.name, COUNT (h.name)
+FROM hotels as h INNER JOIN offers as o ON h.id = hotel_id
+GROUP BY h.id, h.name;
+/*Ejercicio 10*/
+SELECT h.name, COUNT(*)
+FROM hotels as h INNER JOIN offers as o ON hotel_id = h.id
+GROUP BY h.id, h.name
+HAVING COUNT(*) > 6;
