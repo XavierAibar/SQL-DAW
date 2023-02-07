@@ -40,7 +40,7 @@ INSERT INTO places(id,name,area,container) VALUES (7,'Santa Pola',3,1);
 INSERT INTO places(id,name,area,container) VALUES (8,'Gran Alacant',1,7);
 INSERT INTO places(id,name,area,container) VALUES (9,'Jaen',60,10);
 INSERT INTO places(id,name,area) VALUES (10,'España',1000);
-SELECT * FROM places;
+
 CREATE TABLE has_nacionality
 (
   places BIGINT,
@@ -136,5 +136,44 @@ GROUP BY name, area
 ORDER BY area DESc;
 
 /*Ejercicio 14*/
-SELECT 
-FROM 
+SELECT TOP 3 pl.name, COUNT(*)
+FROM  has_nacionality as h INNER JOIN places as pl on pl.id = h.places
+GROUP by pl.id, pl.name, h.places
+ORDER BY COUNT(h.places) DESC;
+
+/*Ejercicio 15*/
+SELECT name, born_date
+FROM persons
+ORDER by born_date
+OFFSET 3 ROWS
+FETCH FIRST 5 ROWS ONLY;
+
+/*Ejercicio 16*/
+
+SELECT name
+FROM persons
+WHERE id NOT IN
+(
+  SELECT persons
+  FROM has_nacionality
+);
+
+/*Ejercicio 17*/
+
+SELECT name
+FROM places
+WHERE id NOT IN
+(
+  SELECT town.id
+  FROM places as town INNER JOIN places as city ON town.container = city.id
+);
+
+/*Ejercicio 18*/
+
+SELECT name
+FROM places
+WHERE id NOT IN
+(
+  SELECT city.id
+  FROM places as town INNER JOIN places as city ON town.container = city.id
+);
