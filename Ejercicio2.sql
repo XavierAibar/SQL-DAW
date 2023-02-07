@@ -1,3 +1,4 @@
+
 CREATE TABLE model
 (
 cod BIGINT,
@@ -17,7 +18,9 @@ INSERT INTO model (cod, description, type, patent) VALUES (8, 'Citröen C4', 'D'
 INSERT INTO model (cod, description, type) VALUES (9, 'Renault Clio', 'D');
 INSERT INTO model (cod, description, type, patent) VALUES (10, 'Mercedes Clase A', 'D', 'AA14');
 INSERT INTO model (cod, description, type, patent) VALUES (11, 'Mercedes Kompressor', 'D', 'AA14');
+--prueba
 SELECT * FROM model;
+
 /*Ejercicio 1*/
 SELECT cod, description
 FROM model;
@@ -32,7 +35,7 @@ WHERE patent LIKE '%AA%';
 /*Ejercicio 4*/
 SELECT cod, description
 FROM model
-WHERE 3 < cod AND cod < 10;
+WHERE cod BETWEEN 3 AND 10;
 /*Ejercicio 5*/
 SELECT cod, description
 FROM model
@@ -48,14 +51,14 @@ SELECT cod, description
 FROM model
 WHERE patent IS NULL;
 /*Ejercicio 8*/
-SELECT COUNT(*)
+SELECT COUNT(*) AS numero_de_modelos
 FROM model;
 /*Ejercicio 9*/
-SELECT COUNT(*)
+SELECT COUNT(*) as numero_de_modelos_tipo_t
 FROM model
 WHERE type LIKE 'T';
 /*Ejercicio 10*/
-SELECT COUNT(*)
+SELECT COUNT(*) as modelos_sin_patente
 FROM model
 WHERE patent IS NULL;
 /*Ejercicio 11*/
@@ -64,7 +67,7 @@ FROM model;
 /*Ejercicio 12*/
 SELECT cod, description
 FROM model
-WHERE description
+WHERE LEN(description) < 15;
 /*Ejercicio 13*/
 SELECT cod, description
 FROM model

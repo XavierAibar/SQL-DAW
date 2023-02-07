@@ -1,3 +1,4 @@
+
 CREATE TABLE model
 (
  id BIGINT,
@@ -38,7 +39,10 @@ INSERT INTO cars(id, plate, color, year, model) VALUES (10, 'JJ', 'Magenta', 200
 INSERT INTO cars(id, plate, color, year, model) VALUES (11, 'KK', 'Gray', 2005, 6);
 INSERT INTO cars(id, plate, color, year, model) VALUES (12, 'LL', 'Purple', 2005, 5);
 INSERT INTO cars(id, plate, color, year, model) VALUES (13, 'MM', 'Yellow', 2006, 6);
+
+--prueba
 SELECT * FROM model;
+
 /*Ejercicio 1*/
 SELECT plate, color
 FROM cars;
@@ -65,25 +69,29 @@ WHERE m.name LIKE '%Citröen%';
 SELECT plate, m.year - c.year
 FROM cars AS c INNER JOIN model as m ON model = m.id;
 /*Ejercicio 8*/
-SELECT MAX(c.year)
+SELECT MAX(c.year) as Año_maximo_seat
 FROM cars AS c INNER JOIN model as m ON model = m.id
 WHERE m.name LIKE '%Seat%';
 /*Ejercicio 9*/
-SELECT AVG(year)
+SELECT AVG(year) as año_medio_creacion_modelos
 FROM model;
 /*Ejercicio 10*/
 SELECT patent
 FROM model
 WHERE patent LIKE '%A%'
-/*Ejercicio 11 NO*/
+/*Ejercicio 11*/
 SELECT name
 FROM model
-WHERE year > AVG(year);
+WHERE year > (SELECT AVG(year) FROM model);
 /*Ejercicio 12*/
-SELECT m.id
+SELECT DISTINCT m.id
 FROM cars AS c INNER JOIN model as m ON model = m.id
 WHERE c.color LIKE 'red';
 /*Ejercicio 13*/
 SELECT name
 FROM model
-WHERE id NOT IN (SELECT model FROM cars);
+WHERE id NOT IN 
+(
+  SELECT model 
+  FROM cars
+);
