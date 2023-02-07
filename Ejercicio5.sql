@@ -102,6 +102,9 @@ FROM persons as p LEFT JOIN works_in as w on p.id = w.person
 LEFT JOIN ofices as o on w.ofice = o.id;
 
 /*Ejercicio 4*/
+SELECT TOP 1 since
+FROM works_in 
+ORDER by since ASC
 
 /*Ejercicio 5*/
 
