@@ -16,6 +16,7 @@ INSERT INTO persons (id, name, gender) VALUES (8, 'Xavi', 'M');
 INSERT INTO persons (id, name, gender) VALUES (9, 'Miguel', 'M');
 INSERT INTO persons (id, name, gender) VALUES (10, 'Manuel', 'F');
 
+--prueba
 SELECT * FROM persons;
 
 CREATE TABLE is_parent
@@ -40,6 +41,7 @@ INSERT INTO is_parent (parent, child) VALUES(3, 1);
 INSERT INTO is_parent (parent, child) VALUES(3, 7);
 INSERT INTO is_parent (parent, child) VALUES(7, 2);
 
+--prueba
 SELECT * FROM is_parent;
 
 CREATE TABLE ofices
@@ -54,6 +56,7 @@ INSERT INTO ofices (id, name) VALUES (3, 'Cajero');
 INSERT INTO ofices (id, name) VALUES (4, 'Luchador');
 INSERT INTO ofices (id, name) VALUES (5, 'Cazarecompensas');
 
+--prueba
 SELECT * FROM ofices;
 
 CREATE TABLE works_in 
@@ -82,6 +85,7 @@ INSERT INTO works_in (person, ofice, since, until) VALUES (8, 3, '2022-12-01', '
 INSERT INTO works_in (person, ofice, since) VALUES (5, 1, '2000-01-01');
 INSERT INTO works_in (person, ofice, since) VALUES (6, 5, '2018-01-24');
 
+--prueba
 SELECT * FROM works_in;
 
 /*Ejercicio 1*/
@@ -159,18 +163,18 @@ WHERE until IS NOT NULL
 
 /*Ejercicio 12*/
 
-SELECT COUNT (*)
+SELECT COUNT (*) AS Padres
 FROM persons as p INNER JOIN is_parent as i on p.id = i.parent
 WHERE p.gender LIKE 'M';
 
-/*Ejercicio 13*/
+/*Ejercicio 13 MAL*/
 
 SELECT father.name as Padre, mother.name as Madre, child.name as hijo
 FROM persons as father INNER JOIN is_parent AS i on father.id = i.parent INNER JOIN persons as child on i.child = child.id
 INNER JOIN is_parent AS ip ON child.id = ip.parent INNER JOIN persons as mother on mother.id = ip.child
 GROUP BY mother.id, father.id, child.id, father.name, mother.name, child.name;
 
-/*Ejercicio 14*/
+/*Ejercicio 14 MAL*/
 
 SELECT father.name as Padre, mother.name as Madre, COUNT(*)
 FROM persons as father INNER JOIN is_parent AS i on father.id = i.parent INNER JOIN persons as child on i.child = child.id

@@ -19,6 +19,9 @@ INSERT INTO persons(id,name,civil_status) VALUES(8,'Juan','separado');
 INSERT INTO persons(id,name,civil_status,born_date) VALUES(9,'Yo','casado','2005-03-03');
 INSERT INTO persons(id,name,civil_status,born_date) VALUES(10,'Mama','casado','1973-12-23');
 
+--prueba 
+SELECT * FROM persons;
+
 CREATE TABLE places
 (
   id BIGINT,
@@ -30,6 +33,8 @@ CREATE TABLE places
   CONSTRAINT fk_places_container FOREIGN KEY (container) REFERENCES places(id)
 );
 
+/*Empezar por España, ya que no tiene container, luego por Madrid, Jaen y Valencia,
+luego Alicante y Getafe, luego Santa Pola y por ultimo Gran Alacant */
 INSERT INTO places(id,name,area,container) VALUES (1,'Alicante',70,3);
 INSERT INTO places(id,name,area,container) VALUES (2,'Getafe',20,4);
 INSERT INTO places(id,name,area,container) VALUES (3,'Valencia',400,10);
@@ -40,6 +45,9 @@ INSERT INTO places(id,name,area,container) VALUES (7,'Santa Pola',3,1);
 INSERT INTO places(id,name,area,container) VALUES (8,'Gran Alacant',1,7);
 INSERT INTO places(id,name,area,container) VALUES (9,'Jaen',60,10);
 INSERT INTO places(id,name,area) VALUES (10,'España',1000);
+
+--prueba
+SELECT * FROM places;
 
 CREATE TABLE has_nacionality
 (
@@ -62,6 +70,9 @@ INSERT INTO has_nacionality(places,persons,dni) VALUES (5,7,'aaaddaa');
 INSERT INTO has_nacionality(places,persons,dni) VALUES (6,8,'aacvaaa');
 INSERT INTO has_nacionality(places,persons,dni) VALUES (1,9,'aaaepaa');
 INSERT INTO has_nacionality(places,persons,dni) VALUES (4,10,'aaayaa');
+
+--Prueba 
+SELECT * FROM has_nacionality
 
 /*Ejercicio 1*/
 

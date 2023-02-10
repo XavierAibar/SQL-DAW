@@ -43,52 +43,29 @@ CREATE TABLE offers
   CONSTRAINT fk_offers_services FOREIGN KEy(service_id) REFERENCES services(id) ON UPDATE CASCADE ON DELETE CASCADE,
   CONSTRAINT fk_offers_hotels FOREIGN KEY(hotel_id) REFERENCES hotels(id) ON UPDATE CASCADE ON DELETE CASCADE
 );
-INSERT INTO offers (hotel_id, service_id)
-VALUES (1, 2);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (1, 3);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (1, 4);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (1, 5);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (2, 6);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (2, 7);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (2, 8);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (2, 9);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (2, 10);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (3, 1);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (3, 2);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (3, 3);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (3, 5);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (3, 7);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (3, 9);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (4, 1);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (4, 2);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (4, 3);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (4, 4);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (4, 5);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (4, 11);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (4, 12);
-INSERT INTO offers (hotel_id, service_id)
-VALUES (4, 13);
+INSERT INTO offers (hotel_id, service_id) VALUES (1, 2);
+INSERT INTO offers (hotel_id, service_id) VALUES (1, 3);
+INSERT INTO offers (hotel_id, service_id) VALUES (1, 4);
+INSERT INTO offers (hotel_id, service_id) VALUES (1, 5);
+INSERT INTO offers (hotel_id, service_id) VALUES (2, 6);
+INSERT INTO offers (hotel_id, service_id) VALUES (2, 7);
+INSERT INTO offers (hotel_id, service_id) VALUES (2, 8);
+INSERT INTO offers (hotel_id, service_id) VALUES (2, 9);
+INSERT INTO offers (hotel_id, service_id) VALUES (2, 10);
+INSERT INTO offers (hotel_id, service_id) VALUES (3, 1);
+INSERT INTO offers (hotel_id, service_id) VALUES (3, 2);
+INSERT INTO offers (hotel_id, service_id) VALUES (3, 3);
+INSERT INTO offers (hotel_id, service_id) VALUES (3, 5);
+INSERT INTO offers (hotel_id, service_id) VALUES (3, 7);
+INSERT INTO offers (hotel_id, service_id) VALUES (3, 9);
+INSERT INTO offers (hotel_id, service_id) VALUES (4, 1);
+INSERT INTO offers (hotel_id, service_id) VALUES (4, 2);
+INSERT INTO offers (hotel_id, service_id) vALUES (4, 3);
+INSERT INTO offers (hotel_id, service_id) VALUES (4, 4);
+INSERT INTO offers (hotel_id, service_id) VALUES (4, 5);
+INSERT INTO offers (hotel_id, service_id) VALUES (4, 11);
+INSERT INTO offers (hotel_id, service_id) VALUES (4, 12);
+INSERT INTO offers (hotel_id, service_id) VALUES (4, 13);
 /*Ejercicio 1*/
 SELECT s.name, s.description
 FROM services as s;
@@ -100,14 +77,14 @@ SELECT h.name
 FROM services AS s INNER JOIN offers ON s.id = service_id INNER JOIN hotels AS h ON hotel_id = h.id
 WHERE foundation_date > '2003';
 /*Ejercicio 4*/
-SELECT h.name, s.name, s.description
+SELECT h.name as Hotel, s.name as Service, s.description
 FROM services as s INNER JOIN offers as o ON s.id = service_id INNER JOIN hotels as h ON hotel_id = h.id;
 /*Ejercicio 5*/
 SELECT s.name
 FROM services as s INNER JOIN offers as o ON s.id = service_id INNER JOIN hotels as h ON hotel_id = h.id
 WHERE foundation_date > '2003-08-2';
 /*Ejercicio 6*/
-SELECT h.name, s.name
+SELECT h.name as hotel, s.name as service
 FROM services as s INNER JOIN offers as o ON s.id = service_id INNER JOIN hotels as h ON hotel_id = h.id
 WHERE h.name LIKE '%A%' AND LEN(s.name) > 8;
 /*Ejercicio 7*/
@@ -127,11 +104,11 @@ SELECT o.service_id
 FROM offers as o
 );
 /*Ejercicio 9*/
-SELECT h.name, COUNT (h.name)
+SELECT h.name, COUNT (h.name) AS Services
 FROM hotels as h INNER JOIN offers as o ON h.id = hotel_id
 GROUP BY h.id, h.name;
 /*Ejercicio 10*/
-SELECT h.name, COUNT(*)
+SELECT h.name, COUNT(*) as Services
 FROM hotels as h INNER JOIN offers as o ON hotel_id = h.id
 GROUP BY h.id, h.name
 HAVING COUNT(*) > 6;
