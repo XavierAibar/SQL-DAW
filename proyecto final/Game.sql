@@ -11,8 +11,8 @@ CREATE TABLE workers
   sales INT,
   name VARCHAR(max) NOT NULL,
   dni VARCHAR(max),
-  age INT,
-  born_date DATE,
+  age INT NOT NULL,
+  born_date DATE NOT NULL,
   shop BIGINT,
   CONSTRAINT pk_id_workers PRIMARY KEY (id),
   CONSTRAINT uk_dni_workers UNIQUE(id),
@@ -33,4 +33,39 @@ CREATE TABLE ost
 (
   id BIGINT,
   CONSTRAINT pk_ost PRIMARY KEY (id)
+);
+
+CREATE TABLE songs
+(
+  id BIGINT,
+  name VARCHAR(max) NOT NULL,
+  band VARCHAR(max) DEFAULT 'Anonymous',
+  release_date DATE NOT NULL,
+  minutes FLOAT NOT NULL,
+  CONSTRAINT pk_songs PRIMARY KEY(id)
+);
+
+CREATE TABLE companies
+(
+  id BIGINT,
+  name VARCHAR(max) NOT NULL,
+  owner VARCHAR(max) NOT NULL,
+  foundation_date DATE NOT NULL,
+  CONSTRAINT pk_company PRIMARY KEY (id)
+);
+
+CREATE TABLE consoles
+(
+  id BIGINT,
+  name VARCHAR(max) NOT NULL,
+  stock INTEGER,
+  release_date DATE NOT NULL,
+  company BIGINT,
+  CONSTRAINT pk_consoles PRIMARY KEY (id),
+  CONSTRAINT fk_console_company FOREIGN KEY (company) REFERENCES companies(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE videogames
+(
+  
 );
