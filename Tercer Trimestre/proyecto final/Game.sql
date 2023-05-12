@@ -1,14 +1,14 @@
 --Tablas
 CREATE TABLE shops
 (
-  id BIGINT,
+  id BIGINT IDENTITY(1,1),
   location VARCHAR(max) NOT NULL,
   CONSTRAINT pk_id_shop PRIMARY KEY (id)
 );
 
 CREATE TABLE workers
 (
-  id BIGINT,
+  id BIGINT IDENTITY(1,1),
   sales INT,
   name VARCHAR(max) NOT NULL,
   dni VARCHAR(max),
@@ -30,17 +30,11 @@ CREATE TABLE is_boss
   CONSTRAINT fk_boss_boss FOREIGN KEY (boss) REFERENCES workers(id),
 );
 
-CREATE TABLE ost
-(
-  id BIGINT,
-  CONSTRAINT pk_ost PRIMARY KEY (id)
-);
-
 CREATE TABLE songs
 (
-  id BIGINT,
+  id BIGINT IDENTITY(1,1),
   name VARCHAR(max) NOT NULL,
-  band VARCHAR(max) DEFAULT 'Anonymous',
+  band VARCHAR(max) DEFAULT 'Unknown',
   release_date DATE NOT NULL,
   minutes FLOAT NOT NULL,
   CONSTRAINT pk_songs PRIMARY KEY(id)
@@ -48,7 +42,7 @@ CREATE TABLE songs
 
 CREATE TABLE companies
 (
-  id BIGINT,
+  id BIGINT IDENTITY(1,1),
   name VARCHAR(max) NOT NULL,
   owner VARCHAR(max) NOT NULL,
   foundation_date DATE NOT NULL,
@@ -57,7 +51,7 @@ CREATE TABLE companies
 
 CREATE TABLE consoles
 (
-  id BIGINT,
+  id BIGINT IDENTITY(1,1),
   name VARCHAR(max) NOT NULL,
   stock INTEGER,
   release_date DATE NOT NULL,
@@ -68,23 +62,21 @@ CREATE TABLE consoles
 
 CREATE TABLE videogames
 (
-  id BIGINT,
+  id BIGINT IDENTITY(1,1),
   gendre VARCHAR(max) NOT NULL,
   name VARCHAR(max) NOT NULL,
   multiplayer BIT NOT NULL,
   release_date DATE NOT NULL,
   pegi VARCHAR(2) NOT NULL,
-  ost BIGINT,
   company BIGINT,
   CONSTRAINT pk_videogames PRIMARY KEY (id),
   CONSTRAINT ck_videogames_pegi CHECK (pegi = '3' OR pegi = '7' OR pegi = '12' OR pegi = '16' OR pegi = '18'),
-  CONSTRAINT fk_videogames_ost FOREIGN KEY (ost) REFERENCES ost(id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_videogame_company FOREIGN KEY (company) REFERENCES companies(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE characters
 (
-  id BIGINT,
+  id BIGINT IDENTITY(1,1),
   name VARCHAR(max) NOT NULL,
   age INTEGER NOT NULL,
   is_main BIT NOT NULL,
@@ -115,7 +107,7 @@ CREATE TABLE uses_ost
   ost BIGINT,
   song BIGINT,
   CONSTRAINT pk_uses_ost PRIMARY KEY (ost, song),
-  CONSTRAINT fk_ost_uses FOREIGN KEY (ost) REFERENCES ost(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_ost_uses FOREIGN KEY (ost) REFERENCES videogames(id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_music_from_ost FOREIGN KEY (song) REFERENCES songs(id) ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 
@@ -150,10 +142,28 @@ CREATE TABLE logs
 );
 
 
---Funciones
+--Inserts
 
 CREATE OR ALTER PROCEDURE log (@message VARCHAR(max)) AS
 BEGIN
 	INSERT INTO logs (message, at) VALUES (@message, GETDATE());
+END
+
+CREATE OR ALTER PROCEDURE insert_shop (@location VARCHAR(max)) AS
+BEGIN
+	DECLARE @message VARCHAR(max);
+	INSERT INTO shops (location) VALUES (@location);
+    set @message = CONCAT('Se ha añadido la tienda con id ',(SELECT COUNT(*) FROM shops), ' ubicado en ', @location);
+    EXEC log @message;
+END
+
+CREATE OR ALTER PROCEDURE insert_consoles (@name VARCHAR(max), @stock INTEGER, @release_date DATE, @company BIGINT) AS
+BEGIN
+	DECLARE @message VARCHAR(max);
+	INSERT INTO consoles (name, stock, release_date, company) VALUES (@name, @stock, @release_date, @company);
+    set @message = CONCAT('Se ha añadido la ' , @name, ' con id ',(SELECT COUNT(*) FROM consoles),
+                          'Que salió en ', @release_date, ' se tienen ', @stock, 
+                          'consolas en stock y pertenece a ', @company);
+    EXEC log @message;
 END
 
