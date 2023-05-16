@@ -12,12 +12,14 @@ CREATE TABLE workers
   sales INT,
   name VARCHAR(max) NOT NULL,
   dni CHAR(9),
+  gender CHAR(1) NOT NULL,
   age INT NOT NULL,
   born_date DATE NOT NULL,
   shop BIGINT,
   CONSTRAINT pk_id_workers PRIMARY KEY (id),
   CONSTRAINT uk_dni_workers UNIQUE(id),
   CONSTRAINT ck_age_workers CHECK ( age BETWEEN 16 AND 70),
+  CONSTRAINT ck_gender_workers CHECK ( gender = 'M' OR gender = 'F'),
   CONSTRAINT fk_shop_workers FOREIGN KEY (shop) REFERENCES shops(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -36,7 +38,7 @@ CREATE TABLE songs
   name VARCHAR(max) NOT NULL,
   band VARCHAR(max) DEFAULT 'Unknown',
   release_date DATE NOT NULL,
-  minutes FLOAT NOT NULL,
+  seconds INTEGER NOT NULL,
   CONSTRAINT pk_songs PRIMARY KEY(id)
 );
 
@@ -213,19 +215,19 @@ BEGIN
     EXEC log @message;
 END
 
-CREATE OR ALTER PROCEDURE insert_song (@name VARCHAR(max), @band VARCHAR(max), @release_date DATE, @minutes FLOAT) AS
+CREATE OR ALTER PROCEDURE insert_song (@name VARCHAR(max), @band VARCHAR(max), @release_date DATE, @seconds INTEGER) AS
 BEGIN
 	DECLARE @message VARCHAR(max);
-    INSERT INTO songs (name, band, release_date, minutes) VALUES (@name, @band, @release_date, @minutes);
-    SET @message = CONCAT('La cancion con el nombre ', @name, 'con el id ',(SELECT COUNT(*) FROM songs) , ', del grupo ', @band, ', salió en ', @release_date, ' y dura ', @minutes);
+    INSERT INTO songs (name, band, release_date, minutes) VALUES (@name, @band, @release_date, @seconds);
+    SET @message = CONCAT('La cancion con el nombre ', @name, 'con el id ',(SELECT COUNT(*) FROM songs) , ', del grupo ', @band, ', salió en ', @release_date, ' y dura ', @seconds, ' segundos.');
     EXEC log @message;
 END
 
-CREATE OR ALTER PROCEDURE insert_workers (@sales INTEGER, @name VARCHAR(max), @dni CHAR(9), @age INTEGER, @born_date DATE, @shop BIGINT) AS
+CREATE OR ALTER PROCEDURE insert_workers (@sales INTEGER, @name VARCHAR(max), @dni CHAR(9), @age INTEGER, gender CHAR(1), @born_date DATE, @shop BIGINT) AS
 BEGIN
 	DECLARE @message VARCHAR(max);
-    INSERT INTO workers (sales, name, dni, age, born_date, shop) VALUES (@sales, @name, @dni, @age, @born_date, @shop);
-    SET @message = CONCAT('El trabajador con el nombre ', @name, 'con el id ',(SELECT COUNT(*) FROM workers) , ', con el dni ', @dni, ', tiene ', @age, ' años, nació el
+    INSERT INTO workers (sales, name, dni, age, gender, born_date, shop) VALUES (@sales, @name, @dni, @age, @born_date, @shop);
+    SET @message = CONCAT(IIF (@gender = 'M','El trabajador ', 'La trabajadora '), 'con el nombre ', @name, 'con el id ',(SELECT COUNT(*) FROM workers) , 'y con el dni ', @dni, ', tiene ', @age, ' años, nació el
                           ', @born_date, ' y pertenece a la tienda con el id ', @shop);
     EXEC log @message;
 END
@@ -445,77 +447,6 @@ BEGIN
 END
 
 
-
---Ver tablas
-
-CREATE OR ALTER FUNCTION view_characters()
-RETURNS TABLE
-AS
-RETURN SELECT * FROM characters;
-
-CREATE OR ALTER FUNCTION view_consoles()
-RETURNS TABLE
-AS
-RETURN SELECT * FROM consoles;
-
-CREATE OR ALTER FUNCTION view_bosses()
-RETURNS TABLE
-AS
-RETURN SELECT * FROM is_boss;
-
-CREATE OR ALTER FUNCTION view_companies()
-RETURNS TABLE
-AS
-RETURN SELECT * FROM companies;
-
-CREATE OR ALTER FUNCTION view_has_characters()
-RETURNS TABLE
-AS
-RETURN SELECT * FROM has_characters;
-
-CREATE OR ALTER FUNCTION view_is_in() RETURNS TABLE AS
-RETURN SELECT * FROM is_in;
-
-CREATE OR ALTER FUNCTION view_logs()
-RETURNS TABLE
-AS
-RETURN SELECT * FROM logs;
-
-CREATE OR ALTER FUNCTION view_sells_consoles()
-RETURNS TABLE
-AS
-RETURN SELECT * FROM sells_consoles;
-
-CREATE OR ALTER FUNCTION view_sells_videogames()
-RETURNS TABLE
-AS
-RETURN SELECT * FROM sells_videogames;
-
-CREATE OR ALTER FUNCTION view_shops()
-RETURNS TABLE
-AS
-RETURN SELECT * FROM shops;
-
-CREATE OR ALTER FUNCTION view_songs()
-RETURNS TABLE
-AS
-RETURN SELECT * FROM songs;
-
-CREATE OR ALTER FUNCTION view_uses_ost()
-RETURNS TABLE
-AS
-RETURN SELECT * FROM uses_ost;
-
-CREATE OR ALTER FUNCTION view_videogames()
-RETURNS TABLE
-AS
-RETURN SELECT * FROM videogames;
-
-CREATE OR ALTER FUNCTION view_workers()
-RETURNS TABLE
-AS
-RETURN SELECT * FROM workers;
-
 --Inserts obligatorios
 
 EXEC insert_shop 'Alicante'
@@ -525,6 +456,28 @@ EXEC insert_shop 'Badajoz'
 EXEC insert_shop 'Barcelona'
 EXEC insert_shop 'A Coruña'
 EXEC insert_shop 'Bilbao'
+
+
+EXEC insert_workers 0, 'Xavier', '74532182A', 'M', 19, '2003-9-29', 1
+EXEC insert_workers 0, 'Robert', '54326543C', 'M', 19, '2003-10-27', 1
+EXEC insert_workers 0, 'Ivens', '86512234B', 'M', 38, '1985-2-10', 1
+EXEC insert_workers 0, 'Paco', '13479034B', 'M', 68, '1954-10-30', 2
+EXEC insert_workers 0, 'María', '5634235K', 'F', 18, '2005-2-27', 2
+EXEC insert_workers 0, 'Pablo', '52662234N', 'M', 25, '1998-1-27', 2
+EXEC insert_workers 0, 'Lucia', '86512234B', 'F', 38, '1985-2-10', 3
+EXEC insert_workers 0, 'Alba', '4587935H', 'F', 18, '2004-9-30', 3
+EXEC insert_workers 0, 'Juan', '34897634O', 'M', 56, '1967-3-15', 3
+EXEC insert_workers 0, 'Sofia', '34869254V', 'F', 46, '1978-9-24', 4
+EXEC insert_workers 0, 'Kevin', '73849483C', 'M', 34, '1989-4-6', 4
+EXEC insert_workers 0, 'Belen', '74786384J', 'F', 26, '1997-5-3', 4
+EXEC insert_workers 0, 'Basilio', '18340594G', 'M', 23, '1999-8-15', 5
+EXEC insert_workers 0, 'Juan', '73980127F', 'M', 36, '1987-1-1', 5
+EXEC insert_workers 0, 'Alvaro', '83950645B', 'M', 34, '1989-8-15', 5
+EXEC insert_workers 0, 'Paco', '73648593G', 'M', 64, '1958-11-20', 6
+EXEC insert_workers 0, 'Alba', '34834953V', 'F', 58, '1964-7-24', 6
+EXEC insert_workers 0, 'Carlos', '12345567S', 'M', 50, '1973-2-10', 6
+
+
 
 
 EXEC insert_character 'Nasus', 100, 0, 1
@@ -546,6 +499,19 @@ EXEC insert_character 'Lenny', 22, 0, 0
 EXEC insert_character 'Nathan Drake', 33, 1, 1
 EXEC insert_character 'Sulivan', 67, 1, 0
 EXEC insert_character 'Elena Fisher', 31, 1, 1
+EXEC insert_character 'Mario', 24, 1, 1
+EXEC insert_character 'Luigi', 24, 1, 1
+EXEC insert_character 'Peach', 21, 0, 1
+EXEC insert_character 'Bowser', 35, 1, 1
+EXEC insert_character 'Pikachu', 7, 0, 1
+EXEC insert_character 'Red', 14, 1, 1
+EXEC insert_character 'Pidgey', 4, 0, 1
+EXEC insert_character 'Ratata', 4, 0, 1
+EXEC insert_character 'Bulbasaur', 4, 0, 1
+EXEC insert_character 'Ursaring', 10, 0, 1
+
+
+
 
 
 EXEC insert_company 'Microsoft', 'Bill Gates', '1975-4-4'
@@ -555,24 +521,48 @@ EXEC insert_company 'Blizzard', 'Myke Ibarra', '2016-5-24'
 EXEC insert_company 'Riot Games', 'Nicolo Laurent', '2006-9-1'
 EXEC insert_company 'Bungie', 'Jason Jones', '1991-2-5'
 EXEC insert_company 'Rockstar Games', 'Dan House', '1998-12-1'
-EXEC insert_company 'Naughty Dog', 'Andy Gavin', '1984-5-6'
+EXEC insert_company 'Naughty Dog', 'Andy Gavin', '1984-5-6' 
+EXEC insert_company 'Game Freak', 'Junichi Masuda', '1989-4-7'
+
+EXEC insert_consoles 'XBOX', 10, '2020-11-10', 1
+EXEC insert_consoles 'Play Station', 10, '2020-11-12', 2
+EXEC insert_consoles 'Nintendo Switch', 10, '2017-3-3', 3
+EXEC insert_consoles 'PC', 10, '1941-8-13', 3
 
 
-EXEC insert_consoles 'XBOX', 10000, '2020-11-10', 1
-EXEC insert_consoles 'Play Station', 10000, '2020-11-12', 2
-EXEC insert_consoles 'Nintendo Switch', 10000, '2017-3-3', 3
-
-EXEC insert_videogame 'Shooter', 'Overwatch', 1, '2016-5-24', '12', 4, 10000
-EXEC insert_videogame 'Triple A', 'Red Dead Redemption', 0, '2010-5-18', '18', 7, 10000
-EXEC insert_videogame 'Triple A', 'Red Dead Redemption 2', 0, '2018-10-26', '18', 7, 10000
-EXEC insert_videogame 'Shooter', 'Halo 3', 1, '2007-9-25', '16', 6, 10000
-EXEC insert_videogame 'Shooter', 'Halo 4', 1, '2012-11-25', '16', 6, 10000
-EXEC insert_videogame 'Moba', 'League Of Legends', 1, '2009-01-15', '12', 5, 10000
-EXEC insert_videogame 'Aventura', 'Uncharted 3', 0, '2011-11-2', '18', 8, 10000
-EXEC insert_videogame 'Aventura', 'Uncharted 4', 0, '2016-5-10', '18', 8, 10000
 
 
-SELECT dbo.view_workers();
+EXEC insert_videogame 'Shooter', 'Overwatch', 1, '2016-5-24', '12', 4, 10
+EXEC insert_videogame 'Triple A', 'Red Dead Redemption', 0, '2010-5-18', '18', 7, 10
+EXEC insert_videogame 'Triple A', 'Red Dead Redemption 2', 0, '2018-10-26', '18', 7, 10
+EXEC insert_videogame 'Shooter', 'Halo 3', 1, '2007-9-25', '16', 6, 10
+EXEC insert_videogame 'Shooter', 'Halo 4', 1, '2012-11-25', '16', 6, 10
+EXEC insert_videogame 'Moba', 'League Of Legends', 1, '2009-01-15', '12', 5, 10
+EXEC insert_videogame 'Aventura', 'Uncharted 3', 0, '2011-11-2', '18', 8, 10
+EXEC insert_videogame 'Aventura', 'Uncharted 4', 0, '2016-5-10', '18', 8, 10
+EXEC insert_videogame 'Plataformas', 'Super Mario Bros', 0, '1985-9-13', '3', 3, 10
+EXEC insert_videogame 'RPG', 'Pokemon Rojo Fuego', 0, '2004-10-1', '3', 3, 10
+EXEC insert_videogame 'RPG', 'Pokemon Plata', 0, '2001-4-6', '3', 3, 10
+
+EXEC insert_song 'Fire', 'Pepe y Pepa', '2010-2-3', 3.14
+EXEC insert_song 'Awaken', 'Riquelme', '1990-8-9', 2.14
+EXEC insert_song 'Mercy', 'Pepe y Pepa', '1989-6-21', 3.50
+EXEC insert_song 'Agua y Mar', 'Riquelme', '2014-4-2', 2.59
+EXEC insert_song 'Look', 'Pepe y Pepa', '2001-12-3', 3.50
+EXEC insert_song 'Save me', 'Riquelme', '2002-5-6', 1.16
+EXEC insert_song 'Get that hope', 'Riquelme', '1962-5-6', 0.59
+EXEC insert_song 'To the beach', 'The Manolos', '2012-3-5', 6.23
+EXEC insert_song 'Bravo', 'The Manolos', '2003-2-15', 15.23
+EXEC insert_song 'Pontevedra', 'The Manolos', '1989-6-12', 1.34
+EXEC insert_song 'Sinmas', 'The Manolos', '1978-6-2', 6.54
+EXEC insert_song 'Nose', 'The Manolos', '2005-4-12', 2.45
+EXEC insert_song 'Hola', 'David Bisbal', '2008-5-12', 3.14
+EXEC insert_song 'Popo', 'David Bisbal', '2017-7-17', 3.14
+EXEC insert_song 'Aaaaa', 'David Bisbal', '2019-10-18', 3.14
+EXEC insert_song 'JuanTrotamundos', 'Meningitis', '2020-5-12', 3.14
+EXEC insert_song 'Flow Violento', 'YoSoyPlex', '1999-5-6', 3.14
+
+
 SELECT message FROM logs
 
 EXEC empty_logs
