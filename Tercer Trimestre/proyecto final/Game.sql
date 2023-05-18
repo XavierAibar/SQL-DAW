@@ -119,7 +119,8 @@ CREATE TABLE sells_consoles
   shop BIGINT,
   console BIGINT,
   worker BIGINT,
-  CONSTRAINT pk_sells_consoles PRIMARY KEY (shop, console, worker),
+  date DATETIME,
+  CONSTRAINT pk_sells_consoles PRIMARY KEY (shop, console, worker, date),
   CONSTRAINT fk_shop_sells_console FOREIGN KEY (shop) REFERENCES shops (id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_console_is_sold FOREIGN KEY (console) REFERENCES consoles (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT fk_worker_sells_console FOREIGN KEY (worker) REFERENCES workers (id) ON DELETE NO ACTION ON UPDATE NO ACTION
@@ -130,6 +131,7 @@ CREATE TABLE sells_videogames
   shop BIGINT,
   videogame BIGINT,
   worker BIGINT,
+  date DATETIME,
   CONSTRAINT pk_sells_videogame PRIMARY KEY (shop, videogame, worker),
   CONSTRAINT fk_shop_sells_videogame FOREIGN KEY (shop) REFERENCES shops (id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_videogame_is_sold FOREIGN KEY (videogame) REFERENCES videogames (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
@@ -218,16 +220,16 @@ END
 CREATE OR ALTER PROCEDURE insert_song (@name VARCHAR(max), @band VARCHAR(max), @release_date DATE, @seconds INTEGER) AS
 BEGIN
 	DECLARE @message VARCHAR(max);
-    INSERT INTO songs (name, band, release_date, minutes) VALUES (@name, @band, @release_date, @seconds);
+    INSERT INTO songs (name, band, release_date, seconds) VALUES (@name, @band, @release_date, @seconds);
     SET @message = CONCAT('La cancion con el nombre ', @name, 'con el id ',(SELECT COUNT(*) FROM songs) , ', del grupo ', @band, ', salió en ', @release_date, ' y dura ', @seconds, ' segundos.');
     EXEC log @message;
 END
 
-CREATE OR ALTER PROCEDURE insert_workers (@sales INTEGER, @name VARCHAR(max), @dni CHAR(9), @age INTEGER, gender CHAR(1), @born_date DATE, @shop BIGINT) AS
+CREATE OR ALTER PROCEDURE insert_workers (@sales INTEGER, @name VARCHAR(max), @dni CHAR(9), @age INTEGER, @gender CHAR(1), @born_date DATE, @shop BIGINT) AS
 BEGIN
 	DECLARE @message VARCHAR(max);
-    INSERT INTO workers (sales, name, dni, age, gender, born_date, shop) VALUES (@sales, @name, @dni, @age, @born_date, @shop);
-    SET @message = CONCAT(IIF (@gender = 'M','El trabajador ', 'La trabajadora '), 'con el nombre ', @name, 'con el id ',(SELECT COUNT(*) FROM workers) , 'y con el dni ', @dni, ', tiene ', @age, ' años, nació el
+    INSERT INTO workers (sales, name, dni, age, gender, born_date, shop) VALUES (@sales, @name, @dni, @age, @gender, @born_date, @shop);
+    SET @message = CONCAT(IIF (@gender = 'M','El trabajador ', 'La trabajadora '), 'con el nombre ', @name, 'con el id ',(SELECT COUNT(*) FROM workers) , ' y con el dni ', @dni, ', tiene ', @age, ' años, nació el
                           ', @born_date, ' y pertenece a la tienda con el id ', @shop);
     EXEC log @message;
 END
@@ -236,59 +238,62 @@ END
 CREATE OR ALTER PROCEDURE insert_boss (@employee BIGINT, @boss BIGINT) AS
 BEGIN
 	DECLARE @message VARCHAR(max);
-	INSERT INTO is_boss (employee, boss) VALUES (@employee, @boss);
-    set @message = CONCAT('El empleado ', (SELECT name FROM workers WHERE id = @employee), ' con el id ', @employee, ' tiene el jefe ', (SELECT name FROM workers WHERE id = @boss),
+    IF ((SELECT shop FROM workers WHERE id = @employee) = (SELECT shop FROM workers WHERE id = @boss))
+    BEGIN
+    		INSERT INTO is_boss (employee, boss) VALUES (@employee, @boss);
+    		set @message = CONCAT('El empleado ', (SELECT name FROM workers WHERE id = @employee), ' con el id ', @employee, ' tiene el jefe ', (SELECT name FROM workers WHERE id = @boss),
                           ' y tiene el id ', @boss);
-    EXEC log @message;
+    		EXEC log @message;
+    END
 END
 
 CREATE OR ALTER PROCEDURE insert_console_sold (@shop BIGINT, @console BIGINT, @worker BIGINT) AS
 BEGIN
 	DECLARE @message VARCHAR(max);
-	INSERT INTO sells_consoles (shop, console, worker) VALUES (@shop, @console, @worker);
-    set @message = CONCAT('La consola ', (SELECT name FROM consoles WHERE id = @console),
+    IF (@shop = (SELECT shop FROM workers WHERE id = @worker))
+    BEGIN
+        INSERT INTO sells_consoles (shop, console, worker, date) VALUES (@shop, @console, @worker, GETDATE());
+    	set @message = CONCAT('La consola ', (SELECT name FROM consoles WHERE id = @console),
                           ' con el id ', @console, ' se ha vendido en la tienda con id ', @shop, ' y ha sido vendida por ',
                           (SELECT name FROM workers WHERE id = @worker), ' con id ', @worker);
-    EXEC log @message;
-	UPDATE consoles
-	SET stock = stock - 1
-	WHERE id = @console;
+    	EXEC log @message;
+		UPDATE consoles
+		SET stock = stock - 1
+		WHERE id = @console;
     
-    UPDATE workers
-	SET sales = sales + 1
-	WHERE id = @worker;
+   	 	UPDATE workers
+		SET sales = sales + 1
+		WHERE id = @worker; 	
+    END
 END
 
 CREATE OR ALTER PROCEDURE insert_videogame_sold (@shop BIGINT, @videogame BIGINT, @worker BIGINT) AS
 BEGIN
 	DECLARE @message VARCHAR(max);
-	INSERT INTO sells_videogames (shop, videogame, worker) VALUES (@shop, @videogame, @worker);
-    set @message = CONCAT('El juego ', (SELECT name FROM videogame WHERE id = @videogame),
+    IF (@shop = (SELECT shop FROM workers WHERE id = @worker))
+	BEGIN
+    	 INSERT INTO sells_videogames (shop, videogame, worker, date) VALUES (@shop, @videogame, @worker,GETDATE());
+    	set @message = CONCAT('El juego ', (SELECT name FROM videogame WHERE id = @videogame),
                           ' con el id ', @videogame, ' se ha vendido en la tienda con id ', @shop, ' y ha sido vendida por ',
                           (SELECT name FROM workers WHERE id = @worker), ' con id ', @worker);
-    EXEC log @message;
-	UPDATE videogames
-	SET stock = stock - 1
-	WHERE id = @videogame;
+    	EXEC log @message;
+		UPDATE videogames
+		SET stock = stock - 1
+		WHERE id = @videogame;
     
-    UPDATE workers
-	SET sales = sales + 1
-	WHERE id = @worker;    
+    	UPDATE workers
+		SET sales = sales + 1
+		WHERE id = @worker; 
+    END   
 END
 
-CREATE OR ALTER PROCEDURE insert_boss (@ost BIGINT, @song BIGINT) AS
+CREATE OR ALTER PROCEDURE insert_song_on_ost (@ost BIGINT, @song BIGINT) AS
 BEGIN
 	DECLARE @message VARCHAR(max);
 	INSERT INTO uses_ost (ost, song) VALUES (@ost, @song);
     set @message = CONCAT('La cancion ', (SELECT name FROM songs WHERE id = @song), ' con el id ', @song, ' en el videojuego ', (SELECT name FROM videogames WHERE id = @ost),
                           ' y tiene el id ', @ost);
     EXEC log @message;
-END
-
-CREATE OR ALTER PROCEDURE delete_character (@character BIGINT) AS
-BEGIN
-	DELETE FROM characters
-    WHERE id = @character
 END
 
 
@@ -362,11 +367,11 @@ BEGIN
 	DELETE FROM logs
 END
 
-CREATE OR ALTER PROCEDURE delete_console_sold (@shop BIGINT, @console BIGINT, @worker BIGINT) AS
+CREATE OR ALTER PROCEDURE delete_console_sold (@shop BIGINT, @console BIGINT, @worker BIGINT, @date DATETIME) AS
 BEGIN
 	DECLARE @message VARCHAR(max);
 	DELETE FROM sells_consoles
-    WHERE shop = @shop AND console = @console AND worker = @worker
+    WHERE shop = @shop AND console = @console AND worker = @worker AND date = @date
     SET @message = CONCAT('Una consola ', (SELECT name FROM consoles WHERE id = @console), ' y con id ', @console, ' ha sido rembolsada ',
                          ', de la tienda con id  ', @shop)
     EXEC log @message;
@@ -381,11 +386,11 @@ BEGIN
 END
 
 
-CREATE OR ALTER PROCEDURE delete_videogame_sold (@shop BIGINT, @videogame BIGINT, @worker BIGINT) AS
+CREATE OR ALTER PROCEDURE delete_videogame_sold (@shop BIGINT, @videogame BIGINT, @worker BIGINT, @date DATETIME) AS
 BEGIN
 	DECLARE @message VARCHAR(max);
 	DELETE FROM sells_videogames
-    WHERE shop = @shop AND videogame = @videogame AND worker = @worker
+    WHERE shop = @shop AND videogame = @videogame AND worker = @worker AND date = @date
     SET @message = CONCAT((SELECT name FROM videogames WHERE id = @videogame), ' con id ', @videogame, ' ha sido rembolsado',
                          ', de la tienda con id  ', @shop)
     EXEC log @message;
@@ -447,6 +452,16 @@ BEGIN
 END
 
 
+--Funciones
+
+CREATE OR ALTER FUNCTION most_seller_worker()
+RETURNS TABLE
+AS
+RETURN SELECT TOP 1 name as Nombre
+       FROM workers
+       ORDER BY sales DESC;
+
+
 --Inserts obligatorios
 
 EXEC insert_shop 'Alicante'
@@ -458,24 +473,24 @@ EXEC insert_shop 'A Coruña'
 EXEC insert_shop 'Bilbao'
 
 
-EXEC insert_workers 0, 'Xavier', '74532182A', 'M', 19, '2003-9-29', 1
-EXEC insert_workers 0, 'Robert', '54326543C', 'M', 19, '2003-10-27', 1
-EXEC insert_workers 0, 'Ivens', '86512234B', 'M', 38, '1985-2-10', 1
-EXEC insert_workers 0, 'Paco', '13479034B', 'M', 68, '1954-10-30', 2
-EXEC insert_workers 0, 'María', '5634235K', 'F', 18, '2005-2-27', 2
-EXEC insert_workers 0, 'Pablo', '52662234N', 'M', 25, '1998-1-27', 2
-EXEC insert_workers 0, 'Lucia', '86512234B', 'F', 38, '1985-2-10', 3
-EXEC insert_workers 0, 'Alba', '4587935H', 'F', 18, '2004-9-30', 3
-EXEC insert_workers 0, 'Juan', '34897634O', 'M', 56, '1967-3-15', 3
-EXEC insert_workers 0, 'Sofia', '34869254V', 'F', 46, '1978-9-24', 4
-EXEC insert_workers 0, 'Kevin', '73849483C', 'M', 34, '1989-4-6', 4
-EXEC insert_workers 0, 'Belen', '74786384J', 'F', 26, '1997-5-3', 4
-EXEC insert_workers 0, 'Basilio', '18340594G', 'M', 23, '1999-8-15', 5
-EXEC insert_workers 0, 'Juan', '73980127F', 'M', 36, '1987-1-1', 5
-EXEC insert_workers 0, 'Alvaro', '83950645B', 'M', 34, '1989-8-15', 5
-EXEC insert_workers 0, 'Paco', '73648593G', 'M', 64, '1958-11-20', 6
-EXEC insert_workers 0, 'Alba', '34834953V', 'F', 58, '1964-7-24', 6
-EXEC insert_workers 0, 'Carlos', '12345567S', 'M', 50, '1973-2-10', 6
+EXEC insert_workers 0, 'Xavier', '74532182A', 19, 'M', '2003-9-29', 1
+EXEC insert_workers 0, 'Robert', '54326543C', 19, 'M',  '2003-10-27', 1
+EXEC insert_workers 0, 'Ivens', '86512234B', 38, 'M',  '1985-2-10', 1
+EXEC insert_workers 0, 'Paco', '13479034B', 68, 'M',  '1954-10-30', 2
+EXEC insert_workers 0, 'María', '5634235K', 18, 'F', '2005-2-27', 2
+EXEC insert_workers 0, 'Pablo', '52662234N', 25, 'M', '1998-1-27', 2
+EXEC insert_workers 0, 'Lucia', '86512234B', 38, 'F',  '1985-2-10', 3
+EXEC insert_workers 0, 'Alba', '4587935H', 18, 'F',  '2004-9-30', 3
+EXEC insert_workers 0, 'Juan', '34897634O', 56, 'M', '1967-3-15', 3
+EXEC insert_workers 0, 'Sofia', '34869254V', 46, 'F',  '1978-9-24', 4
+EXEC insert_workers 0, 'Kevin', '73849483C', 34, 'M', '1989-4-6', 4
+EXEC insert_workers 0, 'Belen', '74786384J', 26, 'F',  '1997-5-3', 4
+EXEC insert_workers 0, 'Basilio', '18340594G', 23, 'M', '1999-8-15', 5
+EXEC insert_workers 0, 'Juan', '73980127F', 36, 'M', '1987-1-1', 5
+EXEC insert_workers 0, 'Alvaro', '83950645B', 34, 'M', '1989-8-15', 5
+EXEC insert_workers 0, 'Paco', '73648593G', 64, 'M', '1958-11-20', 6
+EXEC insert_workers 0, 'Alba', '34834953V', 58, 'F',  '1964-7-24', 6
+EXEC insert_workers 0, 'Carlos', '12345567S', 50, 'M', '1973-2-10', 6
 
 
 
@@ -544,25 +559,105 @@ EXEC insert_videogame 'Plataformas', 'Super Mario Bros', 0, '1985-9-13', '3', 3,
 EXEC insert_videogame 'RPG', 'Pokemon Rojo Fuego', 0, '2004-10-1', '3', 3, 10
 EXEC insert_videogame 'RPG', 'Pokemon Plata', 0, '2001-4-6', '3', 3, 10
 
-EXEC insert_song 'Fire', 'Pepe y Pepa', '2010-2-3', 3.14
-EXEC insert_song 'Awaken', 'Riquelme', '1990-8-9', 2.14
-EXEC insert_song 'Mercy', 'Pepe y Pepa', '1989-6-21', 3.50
-EXEC insert_song 'Agua y Mar', 'Riquelme', '2014-4-2', 2.59
-EXEC insert_song 'Look', 'Pepe y Pepa', '2001-12-3', 3.50
-EXEC insert_song 'Save me', 'Riquelme', '2002-5-6', 1.16
-EXEC insert_song 'Get that hope', 'Riquelme', '1962-5-6', 0.59
-EXEC insert_song 'To the beach', 'The Manolos', '2012-3-5', 6.23
-EXEC insert_song 'Bravo', 'The Manolos', '2003-2-15', 15.23
-EXEC insert_song 'Pontevedra', 'The Manolos', '1989-6-12', 1.34
-EXEC insert_song 'Sinmas', 'The Manolos', '1978-6-2', 6.54
-EXEC insert_song 'Nose', 'The Manolos', '2005-4-12', 2.45
-EXEC insert_song 'Hola', 'David Bisbal', '2008-5-12', 3.14
-EXEC insert_song 'Popo', 'David Bisbal', '2017-7-17', 3.14
-EXEC insert_song 'Aaaaa', 'David Bisbal', '2019-10-18', 3.14
-EXEC insert_song 'JuanTrotamundos', 'Meningitis', '2020-5-12', 3.14
-EXEC insert_song 'Flow Violento', 'YoSoyPlex', '1999-5-6', 3.14
+EXEC insert_song 'Fire', 'Pepe y Pepa', '2010-2-3', 54
+EXEC insert_song 'Awaken', 'Riquelme', '1990-8-9', 44
+EXEC insert_song 'Mercy', 'Pepe y Pepa', '1989-6-21', 150
+EXEC insert_song 'Agua y Mar', 'Riquelme', '2014-4-2', 259
+EXEC insert_song 'Look', 'Pepe y Pepa', '2001-12-3', 350
+EXEC insert_song 'Save me', 'Riquelme', '2002-5-6', 223
+EXEC insert_song 'Get that hope', 'Riquelme', '1962-5-6', 59
+EXEC insert_song 'To the beach', 'The Manolos', '2012-3-5', 623
+EXEC insert_song 'Bravo', 'The Manolos', '2003-2-15', 290
+EXEC insert_song 'Pontevedra', 'The Manolos', '1989-6-12', 43
+EXEC insert_song 'Sinmas', 'The Manolos', '1978-6-2', 900
+EXEC insert_song 'Nose', 'The Manolos', '2005-4-12', 143
+EXEC insert_song 'Hola', 'David Bisbal', '2008-5-12', 150
+EXEC insert_song 'Popo', 'David Bisbal', '2017-7-17', 90
+EXEC insert_song 'Aaaaa', 'David Bisbal', '2019-10-18', 120
+EXEC insert_song 'JuanTrotamundos', 'Meningitis', '2020-5-12', 314
+EXEC insert_song 'Flow Violento', 'YoSoyPlex', '1999-5-6', 180
 
 
-SELECT message FROM logs
 
-EXEC empty_logs
+EXEC insert_boss  3, 1
+EXEC insert_boss  3, 2
+EXEC insert_boss  5, 4
+EXEC insert_boss  6, 4
+EXEC insert_boss  7, 8
+EXEC insert_boss  8, 9
+EXEC insert_boss  10, 12
+EXEC insert_boss  11, 12
+EXEC insert_boss  15, 13
+EXEC insert_boss  15, 14
+EXEC insert_boss  18, 16
+EXEC insert_boss  17, 18
+
+EXEC connect_characters 6, 1
+EXEC connect_characters 6, 2
+EXEC connect_characters 6, 3
+EXEC connect_characters 6, 4
+EXEC connect_characters 1, 5
+EXEC connect_characters 1, 6
+EXEC connect_characters 1, 7
+EXEC connect_characters 1, 8
+EXEC connect_characters 4, 9
+EXEC connect_characters 4, 10
+EXEC connect_characters 4, 11
+EXEC connect_characters 5, 9
+EXEC connect_characters 5, 10
+EXEC connect_characters 5, 11
+EXEC connect_characters 3, 12
+EXEC connect_characters 3, 13
+EXEC connect_characters 2, 13
+EXEC connect_characters 3, 14
+EXEC connect_characters 3, 15
+EXEC connect_characters 2, 15
+EXEC connect_characters 3, 16
+EXEC connect_characters 7, 17
+EXEC connect_characters 8, 17
+EXEC connect_characters 7, 18
+EXEC connect_characters 8, 18
+EXEC connect_characters 7, 19
+EXEC connect_characters 8, 19
+EXEC connect_characters 9, 20
+EXEC connect_characters 9, 21
+EXEC connect_characters 9, 22
+EXEC connect_characters 9, 23
+EXEC connect_characters 10, 24
+EXEC connect_characters 10, 25
+EXEC connect_characters 10, 26
+EXEC connect_characters 10, 27
+EXEC connect_characters 11, 24
+EXEC connect_characters 11, 26
+EXEC connect_characters 11, 27
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SELECT * FROM is_boss
+
+
+
+
+
+--Pruebas 
+
+EXEC insert_console_sold 1, 1, 1
+EXEC delete_console_sold 1, 1, 1, '2023-05-18 13:53:51'
+
+SELECT * FROM dbo.most_seller_worker();
+
+SELECT * FROM sells_consoles
+SELECT * FROM consoles
+		SELECT * FROM dbo.most_seller_worker();
