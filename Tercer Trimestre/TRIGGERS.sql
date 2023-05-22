@@ -88,7 +88,7 @@ VALUES
 (7119,'SERRA','DIRECTOR',7839,'1983-11-19',225000,39000,20),
 (7322,'GARCIA','EMPLEADO',7119,'1982-10-12',129000,0,20)
 
-INSERT INTO Hospital(Hospital_Cod,Nombre,Direccion,Telefono, Num_Cama) 
+INSERT INTO Hospital(hospital_Cod,name,address,tf_number, beds) 
 VALUES(19,'Provincial','O Donell 50','964-4256',502)
 
 INSERT INTO Hospital(hospital_cod, name, address, tf_number, beds) 
@@ -160,3 +160,55 @@ VALUES
 (63827,'Ruiz P.','Ezquerdo 103','26-dic-80','M',100973253),
 (64823,'Fraiser A.','Soto 3','10-jul-80','F',285201776),
 (74835,'Benitez E.','Argentina','05-oct-57','M',154811767)
+
+
+--1
+
+CREATE TRIGGER delete_sala ON Sala AFTER DELETE AS
+BEGIN
+    UPDATE Plantilla
+    SET sala_cod = NULL
+    WHERE sala_Cod IN (SELECT Sala_Cod FROM deleted)
+    
+	update Enfermo
+    SET S = NULL
+    WHERE S IN (SELECT Sala_Cod FROM deleted)
+END
+
+--2
+
+CREATE TRIGGER update_beds ON Sala AFTER UPDATE AS
+BEGIN
+    IF UPDATE(beds)
+    BEGIN
+        UPDATE Hospital
+        SET beds = i.beds
+        FROM Hospital h INNER JOIN Plantilla p ON h.hospital_cod = p.hospital_Cod
+        INNER JOIN inserted i ON p.sala_Cod = i.Sala_Cod;
+    END
+END
+
+--3
+
+CREATE TRIGGER avoid_hospital_with_h ON Hospital INSTEAD OF INSERT AS
+BEGIN
+    DECLARE @hospitalName VARCHAR(50)
+    SELECT @hospitalName = name FROM inserted
+    IF @hospitalName LIKE '%h%'
+    BEGIN
+        RAISERROR('No se permite introducir hospitales con la letra "h" en el nombre.', 16, 1)
+        ROLLBACK TRANSACTION
+    END
+END
+
+--4
+CREATE TRIGGER set_unknown_name ON Emp INSTEAD OF INSERT
+AS
+BEGIN
+    UPDATE Emp
+    SET surname = 'Desconocido'
+    FROM Emp INNER JOIN inserted i ON Emp.emp_no = i.emp_no
+    WHERE i.surname IS NULL
+END
+
+

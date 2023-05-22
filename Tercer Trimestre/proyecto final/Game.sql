@@ -36,7 +36,7 @@ CREATE TABLE songs
 (
   id BIGINT IDENTITY(1,1),
   name VARCHAR(max) NOT NULL,
-  band VARCHAR(max) DEFAULT 'Unknown',
+  band VARCHAR(max),
   release_date DATE NOT NULL,
   seconds INTEGER NOT NULL,
   CONSTRAINT pk_songs PRIMARY KEY(id)
@@ -147,6 +147,19 @@ CREATE TABLE logs
 );
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 --Inserts
 CREATE OR ALTER PROCEDURE log (@message VARCHAR(max)) AS
 BEGIN
@@ -250,41 +263,59 @@ END
 CREATE OR ALTER PROCEDURE insert_console_sold (@shop BIGINT, @console BIGINT, @worker BIGINT) AS
 BEGIN
 	DECLARE @message VARCHAR(max);
-    IF (@shop = (SELECT shop FROM workers WHERE id = @worker))
+    IF (SELECT stock FROM consoles WHERE id = @console) IS NOT NULL
     BEGIN
-        INSERT INTO sells_consoles (shop, console, worker, date) VALUES (@shop, @console, @worker, GETDATE());
-    	set @message = CONCAT('La consola ', (SELECT name FROM consoles WHERE id = @console),
+    	IF (@shop = (SELECT shop FROM workers WHERE id = @worker))
+      	BEGIN
+        	INSERT INTO sells_consoles (shop, console, worker, date) VALUES (@shop, @console, @worker, GETDATE());
+    		set @message = CONCAT('La consola ', (SELECT name FROM consoles WHERE id = @console),
                           ' con el id ', @console, ' se ha vendido en la tienda con id ', @shop, ' y ha sido vendida por ',
                           (SELECT name FROM workers WHERE id = @worker), ' con id ', @worker);
-    	EXEC log @message;
-		UPDATE consoles
-		SET stock = stock - 1
-		WHERE id = @console;
+    		EXEC log @message;
+			UPDATE consoles
+			SET stock = stock - 1
+			WHERE id = @console;
     
-   	 	UPDATE workers
-		SET sales = sales + 1
-		WHERE id = @worker; 	
+   	 		UPDATE workers
+			SET sales = sales + 1
+			WHERE id = @worker;
+        END    
+    END
+    ELSE
+    BEGIN
+        RAISERROR('No se puede realizar la venta ya que no hay en stock.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
     END
 END
 
 CREATE OR ALTER PROCEDURE insert_videogame_sold (@shop BIGINT, @videogame BIGINT, @worker BIGINT) AS
 BEGIN
 	DECLARE @message VARCHAR(max);
-    IF (@shop = (SELECT shop FROM workers WHERE id = @worker))
-	BEGIN
-    	 INSERT INTO sells_videogames (shop, videogame, worker, date) VALUES (@shop, @videogame, @worker,GETDATE());
-    	set @message = CONCAT('El juego ', (SELECT name FROM videogame WHERE id = @videogame),
+    IF (SELECT stock FROM videogames WHERE id = @videogame) IS NOT NULL
+    BEGIN	
+    	IF (@shop = (SELECT shop FROM workers WHERE id = @worker))
+		BEGIN
+    		INSERT INTO sells_videogames (shop, videogame, worker, date) VALUES (@shop, @videogame, @worker,GETDATE());
+    		set @message = CONCAT('El juego ', (SELECT name FROM videogame WHERE id = @videogame),
                           ' con el id ', @videogame, ' se ha vendido en la tienda con id ', @shop, ' y ha sido vendida por ',
                           (SELECT name FROM workers WHERE id = @worker), ' con id ', @worker);
-    	EXEC log @message;
-		UPDATE videogames
-		SET stock = stock - 1
-		WHERE id = @videogame;
+    		EXEC log @message;
+			UPDATE videogames
+			SET stock = stock - 1
+			WHERE id = @videogame;
     
-    	UPDATE workers
-		SET sales = sales + 1
-		WHERE id = @worker; 
-    END   
+    		UPDATE workers
+			SET sales = sales + 1
+			WHERE id = @worker; 
+    	END   
+	END
+    ELSE
+    BEGIN
+        RAISERROR('No se puede realizar la venta ya que no hay en stock.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
 END
 
 CREATE OR ALTER PROCEDURE insert_song_on_ost (@ost BIGINT, @song BIGINT) AS
@@ -299,11 +330,9 @@ END
 
 
 
-
-
-
-
 --delete
+
+
 
 CREATE OR ALTER PROCEDURE delete_character (@character BIGINT) AS
 BEGIN
@@ -367,6 +396,7 @@ BEGIN
 	DELETE FROM logs
 END
 
+--Consultar Javi
 CREATE OR ALTER PROCEDURE delete_console_sold (@shop BIGINT, @console BIGINT, @worker BIGINT, @date DATETIME) AS
 BEGIN
 	DECLARE @message VARCHAR(max);
@@ -452,14 +482,315 @@ BEGIN
 END
 
 
---Funciones
 
-CREATE OR ALTER FUNCTION most_seller_worker()
-RETURNS TABLE
+--Procedures no inserts ni deletes
+
+CREATE OR ALTER PROCEDURE fill_console_stock (@amount INTEGER, @console BIGINT) as
+BEGIN
+	IF (SELECT stock FROM consoles WHERE id = @console) IS NOT NULL
+    BEGIN
+		UPDATE consoles
+    	SET stock = stock + @amount
+    	FROM consoles
+    	WHERE id = @console
+    END
+    
+    ELSE
+    BEGIN
+    	UPDATE consoles
+    	SET stock = @amount
+    	FROM consoles
+    	WHERE id = @console
+    END
+END
+
+CREATE OR ALTER PROCEDURE fill_videogame_stock (@amount INTEGER, @videogame BIGINT) as
+BEGIN
+	IF (SELECT stock FROM videogames WHERE id = @videogame) IS NOT NULL
+    BEGIN
+		UPDATE videogames
+    	SET stock = stock + @amount
+    	FROM videogames
+    	WHERE id = @videogame
+    END
+    
+    ELSE
+    BEGIN
+    	UPDATE videogames
+    	SET stock = @amount
+    	FROM videogames
+    	WHERE id = @videogame
+    END
+END
+
+--Funciones 
+
+
+--DROP FUNCTION most_seller_worker
+CREATE FUNCTION most_seller_worker()
+RETURNS VARCHAR(max)
 AS
-RETURN SELECT TOP 1 name as Nombre
-       FROM workers
-       ORDER BY sales DESC;
+BEGIN
+	DECLARE @name VARCHAR(max);
+    DECLARE @count INT;
+
+    SELECT @count = COUNT(*)
+    FROM workers
+    WHERE sales > 0;
+
+    IF @count > 0
+    BEGIN
+        SET @name = (SELECT TOP 1 name
+                     FROM workers
+                     WHERE sales > 0
+                     ORDER BY sales DESC);
+    END
+    ELSE
+    BEGIN
+        SET @name = 'No se ha vendido nada aún';
+    END
+    
+    RETURN @name;
+END;
+
+
+--DROP FUNCTION least_seller_worker
+CREATE FUNCTION least_seller_worker() RETURNS VARCHAR(max) AS
+BEGIN
+	DECLARE @name VARCHAR(max);
+    DECLARE @count INT;
+
+    SELECT @count = COUNT(*)
+    FROM workers
+    WHERE sales > 0;
+
+    IF @count > 0
+    BEGIN
+        SET @name = (SELECT TOP 1 name
+                     FROM workers
+                     WHERE sales > 0
+                     ORDER BY sales);
+    END
+    ELSE
+    BEGIN
+        SET @name = 'No se ha vendido nada aún';
+    END
+    
+    RETURN @name;
+END
+
+
+
+--DROP FUNCTION avg_songtime_from_game
+CREATE FUNCTION avg_songtime_from_game (@videogame BIGINT) RETURNS INTEGER AS
+BEGIN 
+	RETURN (SELECT avg(seconds)
+            FROM videogames v INNER JOIN uses_ost ost on v.id = ost.ost
+            INNER JOIN songs s ON ost.song = s.id
+            WHERE v.id = @videogame)
+END
+
+
+
+CREATE FUNCTION most_sold_console () RETURNS @result TABLE (consola VARCHAR(20), cantidad_vendida INT) AS
+BEGIN
+	INSERT INTO @result (consola, cantidad_vendida)
+	SELECT TOP 1 c.name, COUNT(*)
+	FROM sells_consoles sc INNER JOIN consoles c ON sc.console = c.id
+	GROUP BY sc.console, c.name
+	ORDER BY COUNT(*) DESC
+
+	RETURN;
+END;
+
+CREATE FUNCTION most_sold_videogame () RETURNS @result TABLE (videojuego VARCHAR(20), cantidad_vendida INT) AS
+BEGIN
+	INSERT INTO @result (videojuego, cantidad_vendida)
+	SELECT TOP 1 v.name, COUNT(*)
+	FROM sells_videogames sv INNER JOIN videogames v ON sv.videogame = v.id
+	GROUP BY sv.videogame, v.name
+	ORDER BY COUNT(*) DESC
+
+	RETURN;
+END;
+
+
+
+
+
+
+
+
+--Triggers
+
+CREATE TRIGGER set_unknown_name ON songs AFTER INSERT
+AS
+BEGIN
+    UPDATE songs
+    SET band = 'Desconocida'
+    WHERE band IS NULL;
+END
+
+
+
+CREATE TRIGGER set_console_stock_to_null ON consoles AFTER UPDATE
+AS
+BEGIN
+	UPDATE consoles
+    SET stock = NULL
+    FROM consoles c INNER JOIN inserted i ON c.id = i.id
+    WHERE i.stock = 0
+END
+
+
+
+CREATE TRIGGER set_videogame_stock_to_null ON videogames AFTER UPDATE
+AS
+BEGIN
+	UPDATE videogames
+    SET stock = NULL
+    FROM videogames v INNER JOIN inserted i ON v.id = i.id
+    WHERE i.stock = 0
+END
+
+
+CREATE OR ALTER TRIGGER prevent_same_hierarchy ON is_boss INSTEAD OF INSERT
+AS
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        INNER JOIN is_boss b ON i.boss = b.employee
+        INNER JOIN workers w ON i.employee = w.id AND b.boss = w.id
+    )
+    BEGIN
+        RAISERROR('No se puede asignar a alguien como jefe de su propio jefe.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+
+    INSERT INTO is_boss (employee, boss)
+    SELECT employee, boss
+    FROM inserted;
+END
+
+
+CREATE TRIGGER prevent_videogame_before_company ON videogames INSTEAD OF INSERT
+AS
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i INNER JOIN companies c ON i.company = c.id
+        WHERE i.release_date < c.foundation_date
+    )
+    BEGIN
+        RAISERROR('No se puede asignar un videojuego a una empresa si el videojuego salió antes que la empresa se fundara.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+
+    INSERT INTO videogames (gendre, name, multiplayer, release_date, pegi, company, stock)
+    SELECT gendre, name, multiplayer, release_date, pegi, company, stock
+    FROM inserted;
+END
+
+CREATE TRIGGER prevent_console_before_company ON consoles INSTEAD OF INSERT
+AS
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i INNER JOIN companies c ON i.company = c.id
+        WHERE i.release_date < c.foundation_date
+    )
+    BEGIN
+        RAISERROR('No se puede asignar una consola a una empresa si la consola salió antes que la empresa se fundara.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+
+    INSERT INTO consoles (name, stock, release_date, company)
+    SELECT name, stock, release_date, company
+    FROM inserted;
+END
+
+
+
+
+
+
+
+
+
+
+
+
+--Cursores SE REPITE EL ULTIMO
+
+CREATE FUNCTION get_song_names_by_videogame(@videogameId BIGINT)
+RETURNS @songNames TABLE (Name VARCHAR(max))
+AS
+BEGIN
+    DECLARE @songName VARCHAR(max);
+    
+    DECLARE songCursor CURSOR FOR
+    SELECT Name
+    FROM songs s
+    INNER JOIN uses_ost uo ON uo.song = s.id
+    WHERE uo.ost = @videogameId;
+    
+    OPEN songCursor;
+        
+    WHILE 1=1
+    BEGIN
+        FETCH NEXT FROM songCursor INTO @songName;
+        INSERT INTO @songNames (Name) VALUES (@songName);
+            
+    IF @@FETCH_STATUS <> 0
+    BREAK;
+    END
+    
+    CLOSE songCursor;
+    DEALLOCATE songCursor;
+    
+    RETURN;
+END;
+
+
+CREATE OR ALTER FUNCTION get_top_seller_per_shop_cursor()
+RETURNS @resultTable TABLE (
+    Location VARCHAR(max),
+    MayorVendedor VARCHAR(max)
+)
+AS
+BEGIN
+    DECLARE @shopId BIGINT;
+    DECLARE @workerName VARCHAR(max);
+    
+    DECLARE cursorShops CURSOR FOR
+    SELECT id
+    FROM shops;
+    
+    OPEN cursorShops;
+        
+    WHILE 1=1
+    BEGIN
+        FETCH NEXT FROM cursorShops INTO @shopId;
+        SELECT TOP 1 @workerName = name
+        FROM workers
+        WHERE shop = @shopId
+        ORDER BY sales DESC;
+        
+        INSERT INTO @resultTable (Location, MayorVendedor)
+        VALUES ((SELECT location FROM shops WHERE id = @shopId), @workerName)
+        IF @@FETCH_STATUS <> 0
+        BREAK;
+    END
+    
+    CLOSE cursorShops;
+    DEALLOCATE cursorShops;
+    
+    RETURN
+END
 
 
 --Inserts obligatorios
@@ -578,7 +909,6 @@ EXEC insert_song 'JuanTrotamundos', 'Meningitis', '2020-5-12', 314
 EXEC insert_song 'Flow Violento', 'YoSoyPlex', '1999-5-6', 180
 
 
-
 EXEC insert_boss  3, 1
 EXEC insert_boss  3, 2
 EXEC insert_boss  5, 4
@@ -631,33 +961,90 @@ EXEC connect_characters 11, 24
 EXEC connect_characters 11, 26
 EXEC connect_characters 11, 27
 
+EXEC insert_videogame_in_consoles 1, 1
+EXEC insert_videogame_in_consoles 1, 2
+EXEC insert_videogame_in_consoles 1, 4
+EXEC insert_videogame_in_consoles 2, 1
+EXEC insert_videogame_in_consoles 3, 1
+EXEC insert_videogame_in_consoles 3, 2
+EXEC insert_videogame_in_consoles 3, 4
+EXEC insert_videogame_in_consoles 4, 1
+EXEC insert_videogame_in_consoles 5, 1
+EXEC insert_videogame_in_consoles 6, 4
+EXEC insert_videogame_in_consoles 7, 2
+EXEC insert_videogame_in_consoles 7, 4
+EXEC insert_videogame_in_consoles 8, 2
+EXEC insert_videogame_in_consoles 8, 4
+EXEC insert_videogame_in_consoles 9, 3
+EXEC insert_videogame_in_consoles 10, 3
+EXEC insert_videogame_in_consoles 11, 3
+
+EXEC insert_song_on_ost 1, 1
+EXEC insert_song_on_ost 1, 5
+EXEC insert_song_on_ost 1, 7
+EXEC insert_song_on_ost 2, 2
+EXEC insert_song_on_ost 2, 8
+EXEC insert_song_on_ost 2, 4
+EXEC insert_song_on_ost 3, 2
+EXEC insert_song_on_ost 3, 3
+EXEC insert_song_on_ost 3, 6
+EXEC insert_song_on_ost 4, 9
+EXEC insert_song_on_ost 4, 14
+EXEC insert_song_on_ost 4, 17
+EXEC insert_song_on_ost 5, 16
+EXEC insert_song_on_ost 5, 15
+EXEC insert_song_on_ost 5, 11
+EXEC insert_song_on_ost 6, 12
+EXEC insert_song_on_ost 6, 13
+EXEC insert_song_on_ost 6, 14
+EXEC insert_song_on_ost 7, 1
+EXEC insert_song_on_ost 7, 12
+EXEC insert_song_on_ost 7, 9
+EXEC insert_song_on_ost 8, 5
+EXEC insert_song_on_ost 8, 6
+EXEC insert_song_on_ost 8, 7
+EXEC insert_song_on_ost 9, 8
+EXEC insert_song_on_ost 9, 5
+EXEC insert_song_on_ost 9, 15
+EXEC insert_song_on_ost 10, 17
+EXEC insert_song_on_ost 10, 15
+EXEC insert_song_on_ost 10, 1
+EXEC insert_song_on_ost 11, 4
+EXEC insert_song_on_ost 11, 3
+EXEC insert_song_on_ost 11, 7
 
 
+--Pruebas mias
 
 
+SELECT * FROM logs
+EXEC insert_song 'a', NULL, '1999-5-6', 100
 
-
-
-
-
-
-
-
-
-
-SELECT * FROM is_boss
-
-
-
-
-
---Pruebas 
-
+EXEC fill_console_stock 1, 1
 EXEC insert_console_sold 1, 1, 1
-EXEC delete_console_sold 1, 1, 1, '2023-05-18 13:53:51'
-
-SELECT * FROM dbo.most_seller_worker();
+EXEC delete_console_sold 1, 1, 1, '2023-05-20 18:33:44'
+SELECT dbo.most_seller_worker();
 
 SELECT * FROM sells_consoles
 SELECT * FROM consoles
-		SELECT * FROM dbo.most_seller_worker();
+SELECT * FROM workers;
+SELECT * FROM characters
+SELECT * FROM songs
+
+
+
+EXEC insert_boss  1, 3
+EXEC delete_boss 1, 3
+SELECT * FROM is_boss
+
+
+SELECT * from uses_ost
+SELECT * FROM songs
+SELECT dbo.avg_songtime_from_game(1)
+
+SELECT Location, TopSellerName
+FROM dbo.get_top_seller_per_shop_cursor();
+
+SELECT * FROM workers
+
+SELECT * FROM dbo.get_song_names_by_videogame(1)
