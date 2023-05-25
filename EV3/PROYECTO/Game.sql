@@ -396,23 +396,25 @@ BEGIN
 	DELETE FROM logs
 END
 
---Consultar Javi
+--KEEPLUKING
 CREATE OR ALTER PROCEDURE delete_console_sold (@shop BIGINT, @console BIGINT, @worker BIGINT, @date DATETIME) AS
 BEGIN
 	DECLARE @message VARCHAR(max);
 	DELETE FROM sells_consoles
-    WHERE shop = @shop AND console = @console AND worker = @worker AND date = @date
+    WHERE shop = @shop AND console = @console AND worker = @worker AND date LIKE @date
     SET @message = CONCAT('Una consola ', (SELECT name FROM consoles WHERE id = @console), ' y con id ', @console, ' ha sido rembolsada ',
                          ', de la tienda con id  ', @shop)
     EXEC log @message;
     
     UPDATE consoles
 	SET stock = stock + 1
-	WHERE id = @console;
+	WHERE id IN (SELECT console FROM sells_consoles WHERE console = @console AND worker = @worker AND shop = @shop 
+                 AND date = @date)
     
     UPDATE workers
 	SET sales = sales - 1
-	WHERE id = @worker;      
+	WHERE id IN (SELECT worker FROM sells_consoles WHERE console = @console AND worker = @worker AND shop = @shop 
+                 AND date = @date)
 END
 
 
@@ -724,7 +726,7 @@ END
 
 
 
---Cursores SE REPITE EL ULTIMO
+--Cursores 
 
 CREATE FUNCTION get_song_names_by_videogame(@videogameId BIGINT)
 RETURNS @songNames TABLE (Name VARCHAR(max))
@@ -743,24 +745,22 @@ BEGIN
     WHILE 1=1
     BEGIN
         FETCH NEXT FROM songCursor INTO @songName;
-        INSERT INTO @songNames (Name) VALUES (@songName);
+      	IF @@FETCH_STATUS <> 0
+	      	BREAK;
+
+		INSERT INTO @songNames (Name) VALUES (@songName);
             
-    IF @@FETCH_STATUS <> 0
-    BREAK;
     END
     
     CLOSE songCursor;
     DEALLOCATE songCursor;
     
-    RETURN;
-END;
+    RETURN
+END
 
 
 CREATE OR ALTER FUNCTION get_top_seller_per_shop_cursor()
-RETURNS @resultTable TABLE (
-    Location VARCHAR(max),
-    MayorVendedor VARCHAR(max)
-)
+RETURNS @resultTable TABLE ( location VARCHAR(max), mayorvendedor VARCHAR(max))
 AS
 BEGIN
     DECLARE @shopId BIGINT;
@@ -779,11 +779,10 @@ BEGIN
         FROM workers
         WHERE shop = @shopId
         ORDER BY sales DESC;
-        
-        INSERT INTO @resultTable (Location, MayorVendedor)
-        VALUES ((SELECT location FROM shops WHERE id = @shopId), @workerName)
         IF @@FETCH_STATUS <> 0
-        BREAK;
+        	BREAK;
+        INSERT INTO @resultTable (location, mayorvendedor)
+        VALUES ((SELECT location FROM shops WHERE id = @shopId), @workerName)
     END
     
     CLOSE cursorShops;
@@ -1022,7 +1021,7 @@ EXEC insert_song 'a', NULL, '1999-5-6', 100
 
 EXEC fill_console_stock 1, 1
 EXEC insert_console_sold 1, 1, 1
-EXEC delete_console_sold 1, 1, 1, '2023-05-20 18:33:44'
+EXEC delete_console_sold 1, 1, 1, '2023-05-25 14:06:00'
 SELECT dbo.most_seller_worker();
 
 SELECT * FROM sells_consoles
