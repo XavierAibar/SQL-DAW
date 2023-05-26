@@ -396,44 +396,67 @@ BEGIN
 	DELETE FROM logs
 END
 
---KEEPLUKING
 CREATE OR ALTER PROCEDURE delete_console_sold (@shop BIGINT, @console BIGINT, @worker BIGINT, @date DATETIME) AS
 BEGIN
-	DECLARE @message VARCHAR(max);
-	DELETE FROM sells_consoles
-    WHERE shop = @shop AND console = @console AND worker = @worker AND date LIKE @date
-    SET @message = CONCAT('Una consola ', (SELECT name FROM consoles WHERE id = @console), ' y con id ', @console, ' ha sido rembolsada ',
-                         ', de la tienda con id  ', @shop)
-    EXEC log @message;
+    DECLARE @message VARCHAR(max);
+    DECLARE @rowCount INT;
     
-    UPDATE consoles
-	SET stock = stock + 1
-	WHERE id IN (SELECT console FROM sells_consoles WHERE console = @console AND worker = @worker AND shop = @shop 
-                 AND date = @date)
+    DELETE FROM sells_consoles
+    WHERE shop = @shop AND console = @console AND worker = @worker AND date LIKE @date;
     
-    UPDATE workers
-	SET sales = sales - 1
-	WHERE id IN (SELECT worker FROM sells_consoles WHERE console = @console AND worker = @worker AND shop = @shop 
-                 AND date = @date)
+    SET @rowCount = @@ROWCOUNT; -- Almacenar la cantidad de filas eliminadas
+    
+    IF @rowCount > 0
+    BEGIN
+        SET @message = CONCAT('Una consola ', (SELECT name FROM consoles WHERE id = @console), ' y con id ', @console, ' ha sido reembolsada ',
+                              'de la tienda con id ', @shop);
+        
+        EXEC log @message;
+        
+        UPDATE consoles
+        SET stock = stock + 1
+        WHERE id = @console;
+        
+        UPDATE workers
+        SET sales = sales - 1
+        WHERE id = @worker;
+    END
+     ELSE
+    BEGIN
+        RAISERROR('No se encontraron ventas para los parámetros especificados.', 16, 1);
+    END
 END
+
 
 
 CREATE OR ALTER PROCEDURE delete_videogame_sold (@shop BIGINT, @videogame BIGINT, @worker BIGINT, @date DATETIME) AS
 BEGIN
 	DECLARE @message VARCHAR(max);
+    DECLARE @rowCount INT;
+    
 	DELETE FROM sells_videogames
-    WHERE shop = @shop AND videogame = @videogame AND worker = @worker AND date = @date
-    SET @message = CONCAT((SELECT name FROM videogames WHERE id = @videogame), ' con id ', @videogame, ' ha sido rembolsado',
+    WHERE shop = @shop AND videogame = @videogame AND worker = @worker AND date LIKE @date
+    
+    SET @rowCount = @@ROWCOUNT; 
+    
+    IF @rowCount > 0
+    BEGIN
+    	SET @message = CONCAT((SELECT name FROM videogames WHERE id = @videogame), ' con id ', @videogame, ' ha sido rembolsado',
                          ', de la tienda con id  ', @shop)
-    EXEC log @message;
+    	EXEC log @message;
     
-    UPDATE videogames
-	SET stock = stock + 1
-	WHERE id = @videogame;
+    	UPDATE videogames
+		SET stock = stock + 1
+		WHERE id = @videogame;
     
-    UPDATE workers
-	SET sales = sales - 1
-	WHERE id = @worker;      
+    	UPDATE workers
+		SET sales = sales - 1
+		WHERE id = @worker;    
+    END
+    ELSE
+    BEGIN
+        RAISERROR('No se encontraron ventas para los parámetros especificados.', 16, 1);
+    END
 END
 
 CREATE OR ALTER PROCEDURE delete_shop (@shop BIGINT) AS
@@ -524,6 +547,29 @@ BEGIN
     	WHERE id = @videogame
     END
 END
+
+
+CREATE OR ALTER PROCEDURE new_owner (@id BIGINT, @name VARCHAR(max)) AS
+BEGIN
+	DELETE owner FROM companies
+    WHERE id = @id
+    
+    UPDATE companies
+    set owner = @name
+END
+
+CREATE OR ALTER PROCEDURE kill_character (@id BIGINT) AS 
+BEGIN
+	IF (SELECT is_alive FROM characters WHERE id = @id) = 1
+    BEGIN
+        UPDATE characters
+        set is_alive = 0
+        WHERE id = @id
+    END
+    ELSE
+    RAISERROR('El personaje ya está muerto.', 1, 16)
+END
+
 
 --Funciones 
 
@@ -616,7 +662,75 @@ BEGIN
 	RETURN;
 END;
 
+CREATE FUNCTION most_sold_videogame () RETURNS @result TABLE (videojuego VARCHAR(20), cantidad_vendida INT) AS
+BEGIN
+	INSERT INTO @result (videojuego, cantidad_vendida)
+	SELECT TOP 1 v.name, COUNT(*)
+	FROM sells_videogames sv INNER JOIN videogames v ON sv.videogame = v.id
+	GROUP BY sv.videogame, v.name
+	ORDER BY COUNT(*) DESC
 
+	RETURN;
+END;
+
+
+CREATE FUNCTION first_company_ever() RETURNS VARCHAR(max) AS
+BEGIN
+	RETURN (SELECT TOP 1 name 
+            FROM companies
+            ORDER BY foundation_date)
+END
+
+CREATE FUNCTION first_console_ever() RETURNS VARCHAR(max) AS
+BEGIN
+	RETURN (SELECT TOP 1 name 
+            FROM consoles
+            ORDER BY release_date)
+END
+
+CREATE FUNCTION first_videogame_ever() RETURNS VARCHAR(max) AS
+BEGIN
+	RETURN (SELECT TOP 1 name 
+            FROM videogames
+            ORDER BY release_date)
+END
+
+CREATE FUNCTION last_company_ever() RETURNS VARCHAR(max) AS
+BEGIN
+	RETURN (SELECT TOP 1 name 
+            FROM companies
+            ORDER BY foundation_date DESC)
+END
+
+CREATE FUNCTION last_console_ever() RETURNS VARCHAR(max) AS
+BEGIN
+	RETURN (SELECT TOP 1 name 
+            FROM consoles
+            ORDER BY release_date DESC)
+END
+
+CREATE FUNCTION last_videogame_ever() RETURNS VARCHAR(max) AS
+BEGIN
+	RETURN (SELECT TOP 1 name 
+            FROM videogames
+            ORDER BY release_date DESC)
+END
+
+CREATE FUNCTION consoles_sold_today() RETURNS INTEGER AS
+BEGIN   
+    RETURN 
+    (SELECT COUNT(*)
+    FROM sells_consoles
+    WHERE CONVERT(DATE, date) = CONVERT(DATE, GETDATE()));    
+END
+
+CREATE FUNCTION videogames_sold_today() RETURNS INTEGER AS
+BEGIN   
+    RETURN 
+    (SELECT COUNT(*)
+    FROM sells_videogames
+    WHERE CONVERT(DATE, date) = CONVERT(DATE, GETDATE()));    
+END
 
 
 
@@ -714,12 +828,6 @@ BEGIN
     SELECT name, stock, release_date, company
     FROM inserted;
 END
-
-
-
-
-
-
 
 
 
@@ -1013,7 +1121,7 @@ EXEC insert_song_on_ost 11, 3
 EXEC insert_song_on_ost 11, 7
 
 
---Pruebas mias
+--Pruebas mias, borré bastantes
 
 
 SELECT * FROM logs
@@ -1021,7 +1129,8 @@ EXEC insert_song 'a', NULL, '1999-5-6', 100
 
 EXEC fill_console_stock 1, 1
 EXEC insert_console_sold 1, 1, 1
-EXEC delete_console_sold 1, 1, 1, '2023-05-25 14:06:00'
+EXEC delete_console_sold 1, 1, 1, '2023-05-26 15:47:15'
+
 SELECT dbo.most_seller_worker();
 
 SELECT * FROM sells_consoles
@@ -1047,3 +1156,10 @@ FROM dbo.get_top_seller_per_shop_cursor();
 SELECT * FROM workers
 
 SELECT * FROM dbo.get_song_names_by_videogame(1)
+
+
+EXEC insert_console_sold 1,3,3
+
+SELECT * FROM sells_consoles
+SELECT * FROM consoles
+SELECT * FROM workers;
