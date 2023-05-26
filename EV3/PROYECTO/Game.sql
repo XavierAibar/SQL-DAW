@@ -512,6 +512,7 @@ END
 
 CREATE OR ALTER PROCEDURE fill_console_stock (@amount INTEGER, @console BIGINT) as
 BEGIN
+	DECLARE @message VARCHAR(max);
 	IF (SELECT stock FROM consoles WHERE id = @console) IS NOT NULL
     BEGIN
 		UPDATE consoles
@@ -527,10 +528,13 @@ BEGIN
     	FROM consoles
     	WHERE id = @console
     END
+    SET @message = CONCAT('Se han añadido unas nuevas ', @amount,' consolas con nombre ', (SELECT name FROM consoles WHERE id = @console), ' y con id ', @console)
+    EXEC log @message;
 END
 
 CREATE OR ALTER PROCEDURE fill_videogame_stock (@amount INTEGER, @videogame BIGINT) as
 BEGIN
+	DECLARE @message VARCHAR(max);
 	IF (SELECT stock FROM videogames WHERE id = @videogame) IS NOT NULL
     BEGIN
 		UPDATE videogames
@@ -546,16 +550,17 @@ BEGIN
     	FROM videogames
     	WHERE id = @videogame
     END
+    SET @message = CONCAT('Se han añadido unas nuevas ', @amount,' consolas con nombre ', (SELECT name FROM consoles WHERE id = @console), ' y con id ', @console)
+    EXEC log @message;
 END
 
 
 CREATE OR ALTER PROCEDURE new_owner (@id BIGINT, @name VARCHAR(max)) AS
 BEGIN
-	DELETE owner FROM companies
-    WHERE id = @id
     
     UPDATE companies
     set owner = @name
+    WHERE id = @id
 END
 
 CREATE OR ALTER PROCEDURE kill_character (@id BIGINT) AS 
@@ -568,6 +573,14 @@ BEGIN
     END
     ELSE
     RAISERROR('El personaje ya está muerto.', 1, 16)
+END
+
+
+CREATE OR ALTER PROCEDURE change_workplace (@worker BIGINT, @shop BIGINT) AS
+BEGIN
+	UPDATE workers
+    set shop = @shop
+    WHERE id = @worker
 END
 
 
@@ -632,10 +645,13 @@ END
 --DROP FUNCTION avg_songtime_from_game
 CREATE FUNCTION avg_songtime_from_game (@videogame BIGINT) RETURNS INTEGER AS
 BEGIN 
-	RETURN (SELECT avg(seconds)
+RETURN 
+(
+  			SELECT avg(seconds)
             FROM videogames v INNER JOIN uses_ost ost on v.id = ost.ost
             INNER JOIN songs s ON ost.song = s.id
-            WHERE v.id = @videogame)
+            WHERE v.id = @videogame
+);
 END
 
 
@@ -676,9 +692,12 @@ END;
 
 CREATE FUNCTION first_company_ever() RETURNS VARCHAR(max) AS
 BEGIN
-	RETURN (SELECT TOP 1 name 
+RETURN 
+(
+  			SELECT TOP 1 name 
             FROM companies
-            ORDER BY foundation_date)
+            ORDER BY foundation_date
+);
 END
 
 CREATE FUNCTION first_console_ever() RETURNS VARCHAR(max) AS
@@ -690,38 +709,52 @@ END
 
 CREATE FUNCTION first_videogame_ever() RETURNS VARCHAR(max) AS
 BEGIN
-	RETURN (SELECT TOP 1 name 
+RETURN     
+(
+  			SELECT TOP 1 name 
             FROM videogames
-            ORDER BY release_date)
+            ORDER BY release_date
+);
 END
 
 CREATE FUNCTION last_company_ever() RETURNS VARCHAR(max) AS
 BEGIN
-	RETURN (SELECT TOP 1 name 
+RETURN 
+(
+  			SELECT TOP 1 name 
             FROM companies
-            ORDER BY foundation_date DESC)
+            ORDER BY foundation_date DESC
+);
 END
 
 CREATE FUNCTION last_console_ever() RETURNS VARCHAR(max) AS
 BEGIN
-	RETURN (SELECT TOP 1 name 
+RETURN 
+(
+  			SELECT TOP 1 name 
             FROM consoles
-            ORDER BY release_date DESC)
+            ORDER BY release_date DESC
+);
 END
 
 CREATE FUNCTION last_videogame_ever() RETURNS VARCHAR(max) AS
 BEGIN
-	RETURN (SELECT TOP 1 name 
+RETURN 
+(			
+  			SELECT TOP 1 name 
             FROM videogames
-            ORDER BY release_date DESC)
+            ORDER BY release_date DESC
+);
 END
 
 CREATE FUNCTION consoles_sold_today() RETURNS INTEGER AS
 BEGIN   
-    RETURN 
-    (SELECT COUNT(*)
+RETURN 
+(
+    SELECT COUNT(*)
     FROM sells_consoles
-    WHERE CONVERT(DATE, date) = CONVERT(DATE, GETDATE()));    
+    WHERE CONVERT(DATE, date) = CONVERT(DATE, GETDATE())
+);    
 END
 
 CREATE FUNCTION videogames_sold_today() RETURNS INTEGER AS
@@ -732,6 +765,36 @@ BEGIN
     WHERE CONVERT(DATE, date) = CONVERT(DATE, GETDATE()));    
 END
 
+CREATE FUNCTION company_owner(@id BIGINT) RETURNS VARCHAR(max) AS
+BEGIN
+RETURN
+(
+     SELECT owner
+     FROM companies
+     WHERE id = @id
+);
+END
+
+     
+CREATE FUNCTION mains_from_game(@id BIGINT)
+RETURNS TABLE
+AS
+RETURN
+(
+	SELECT c.name
+	FROM videogames v INNER JOIN has_characters hc on v.id = hc.videogame INNER JOIN characters c ON hc.character = c.id
+	WHERE c.is_main = 1 AND v.id = @id
+);  
+
+CREATE FUNCTION dead_characters_from_game(@id BIGINT)
+RETURNS TABLE
+AS
+RETURN
+(
+	SELECT c.name
+	FROM videogames v INNER JOIN has_characters hc on v.id = hc.videogame INNER JOIN characters c ON hc.character = c.id
+	WHERE c.is_alive = 0 AND v.id = @id
+);  
 
 
 
@@ -1121,7 +1184,7 @@ EXEC insert_song_on_ost 11, 3
 EXEC insert_song_on_ost 11, 7
 
 
---Pruebas mias, borré bastantes
+--Pruebas mias
 
 
 SELECT * FROM logs
